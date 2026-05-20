@@ -1,0 +1,14 @@
+node_modules
+dist
+.DS_Store
+.env
+.env.local
+_legacy-portfolio
+*.log
+
+# Cursor AI — guidelines and agent config (local only)
+.cursor/
+.cursorrules
+.cursorignore
+CONSTITUTION.md
+AGENTS.md
