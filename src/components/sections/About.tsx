@@ -1,30 +1,32 @@
-import { site } from '../../content/site';
 import { ScrollReveal } from '../ui/ScrollReveal';
+import aboutPhoto from '../media/IMG_5584.jpg';
+
+// ── Edit your About Me text here ──────────────────────────────────────────────
+const ABOUT_PARAGRAPHS = [
+  "I'm Jacob, a Computer Science major at the University of Toronto.",
+  "I'm from the San Francisco Bay Area, but as an American-Canadian dual citizen, I've always loved visiting Toronto and Ottawa during the holidays to see my extended family.",
+  "I'm passionate about many things, including tech, music, food, swimming/lifting, and video games.",
+  "Right now I'm focused on learning as much as I can, both through my academics and through building fun projects, and I can't wait to show off some of what I've done so far!",
+];
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function About() {
   return (
-    <section id="about" className="section">
-      <ScrollReveal>
-        <h2 className="section__title">{site.about.title}</h2>
+    <section id="about" className="section about-split">
+      <ScrollReveal className="about-split__image-col">
+        <img
+          src={aboutPhoto}
+          alt="Me and Goong Goong"
+          className="about-split__photo"
+        />
       </ScrollReveal>
-      <div className="prose-grid">
-        <ScrollReveal className="card" delay={80}>
-          {site.about.paragraphs.map((p) => (
-            <p key={p.slice(0, 24)}>{p}</p>
-          ))}
-        </ScrollReveal>
-        <ScrollReveal className="card" delay={160}>
-          {site.interests.paragraphs.map((p) => (
-            <p key={p.slice(0, 24)}>{p}</p>
-          ))}
-        </ScrollReveal>
-        <ScrollReveal className="card card--accent" delay={240}>
-          <h3 className="card__title">{site.hireMe.title}</h3>
-          {site.hireMe.paragraphs.map((p) => (
-            <p key={p.slice(0, 24)}>{p}</p>
-          ))}
-        </ScrollReveal>
-      </div>
+
+      <ScrollReveal className="about-split__text-col" delay={120}>
+        <h2 className="section__title">About Me</h2>
+        {ABOUT_PARAGRAPHS.map((p) => (
+          <p key={p.slice(0, 32)} className="about-split__p">{p}</p>
+        ))}
+      </ScrollReveal>
     </section>
   );
 }
