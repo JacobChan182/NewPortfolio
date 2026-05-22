@@ -14,6 +14,7 @@ export function useHeroSlideOut(panelRef: RefObject<HTMLElement | null>) {
   const animatingRef = useRef(false);
   const hasScrolledAwayRef = useRef(false);
   const lastScrollYRef = useRef(0);
+  const restoreCooldownRef = useRef(false);
 
   // Disable browser scroll restoration so we control the position ourselves
   useEffect(() => {
@@ -103,6 +104,10 @@ export function useHeroSlideOut(panelRef: RefObject<HTMLElement | null>) {
         setSpacerCollapsed(true);
       } else {
         setSpacerCollapsed(false);
+        // Block dismiss for a brief window so Lenis' restart scroll event
+        // doesn't immediately re-trigger the dismiss.
+        restoreCooldownRef.current = true;
+        window.setTimeout(() => { restoreCooldownRef.current = false; }, 150);
       }
       unlockScroll();
       lastScrollYRef.current = getScrollY();
@@ -122,7 +127,7 @@ export function useHeroSlideOut(panelRef: RefObject<HTMLElement | null>) {
     };
 
     const runDismiss = () => {
-      if (dismissedRef.current || animatingRef.current) return;
+      if (dismissedRef.current || animatingRef.current || restoreCooldownRef.current) return;
       animatingRef.current = true;
       hasScrolledAwayRef.current = false;
       lockScroll();
@@ -183,7 +188,7 @@ export function useHeroSlideOut(panelRef: RefObject<HTMLElement | null>) {
       const scrollY = getScrollY();
 
       if (!dismissedRef.current) {
-        if (scrollY < 1 && e.deltaY > 0) {
+        if (scrollY < 1 && e.deltaY > 0 && !restoreCooldownRef.current) {
           e.preventDefault();
           runDismiss();
         }
