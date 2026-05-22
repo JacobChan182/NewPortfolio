@@ -15,6 +15,18 @@ export function useHeroSlideOut(panelRef: RefObject<HTMLElement | null>) {
   const hasScrolledAwayRef = useRef(false);
   const lastScrollYRef = useRef(0);
 
+  // Disable browser scroll restoration so we control the position ourselves
+  useEffect(() => {
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    return () => {
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'auto';
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const panel = panelRef.current;
     if (!panel) return;
@@ -28,6 +40,10 @@ export function useHeroSlideOut(panelRef: RefObject<HTMLElement | null>) {
     };
 
     const isScrollingUp = (scrollY: number) => scrollY < lastScrollYRef.current - 0.5;
+
+    // Always start at the top — scroll restoration is disabled above
+    window.scrollTo(0, 0);
+    lastScrollYRef.current = 0;
 
     if (reducedMotion) {
       const update = () => {
