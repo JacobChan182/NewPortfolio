@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "convert-hero-video": "node scripts/convert-hero-video.mjs"
+    "convert-hero-video": "node scripts/convert-hero-video.mjs",
+    "optimize-chanocaster": "node scripts/optimize-chanocaster-glb.mjs"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

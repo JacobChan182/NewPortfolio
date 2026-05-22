@@ -9,20 +9,19 @@ import {
   useState,
   type RefObject,
 } from 'react';
-import type { Group, Object3D } from 'three';
+import type { Group, Material, Mesh, Object3D, Texture } from 'three';
 import { Box3, Group as ThreeGroup, PerspectiveCamera, Vector3 } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
-/** Legacy portfolio mesh (JacobChan182/portfolio `public/chanocaster.glb`, ~13.6 MB) */
-export const CHANOCASTER_MODEL_URL = '/models/chanocaster.glb';
+/** Balanced mesh: `npm run optimize-chanocaster` → chanocaster-mid.glb (~65% of source verts) */
+export const CHANOCASTER_MODEL_URL = '/models/chanocaster-mid.glb';
 
 const MODEL_ROTATION: [number, number, number] = [0, 0, 0];
 const MODEL_Y_OFFSET = 0;
 const AUTO_SPIN_SPEED = 0.4;
-/** Avoid huge delta spikes after tab focus / hitch (keeps spin visually steady) */
 const MAX_SPIN_DELTA = 1 / 30;
-const MAX_DPR = 1.5;
+const MAX_DPR = 1.25;
 const RESIZE_DEBOUNCE_MS = 200;
 
 useGLTF.preload(CHANOCASTER_MODEL_URL);
@@ -31,6 +30,32 @@ type ModelBounds = {
   center: Vector3;
   maxDim: number;
 };
+
+function optimizeScene(scene: Object3D) {
+  scene.traverse((obj) => {
+    const mesh = obj as Mesh;
+    if (!mesh.isMesh) return;
+
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    mesh.frustumCulled = true;
+
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const material of materials) {
+      if (!material) continue;
+      tuneMaterial(material);
+    }
+  });
+}
+
+function tuneMaterial(mat: Material) {
+  for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap'] as const) {
+    const tex = (mat as unknown as Record<string, unknown>)[key];
+    if (tex && typeof tex === 'object' && 'anisotropy' in tex) {
+      (tex as Texture).anisotropy = 1;
+    }
+  }
+}
 
 function computeModelBounds(scene: Object3D): ModelBounds {
   const wrapper = new ThreeGroup();
@@ -55,17 +80,23 @@ function ChanocasterContent({
   spinEnabledRef: RefObject<boolean>;
 }) {
   const { scene } = useGLTF(CHANOCASTER_MODEL_URL);
-  const bounds = useMemo(() => computeModelBounds(scene), [scene]);
+
+  const preparedScene = useMemo(() => {
+    optimizeScene(scene);
+    return scene;
+  }, [scene]);
+
+  const bounds = useMemo(() => computeModelBounds(preparedScene), [preparedScene]);
 
   return (
     <>
       <Model
-        scene={scene}
+        scene={preparedScene}
         userHasGrabbedRef={userHasGrabbedRef}
         spinEnabledRef={spinEnabledRef}
       />
       <FitCamera bounds={bounds} spinEnabledRef={spinEnabledRef} />
-      <Environment preset="studio" frames={1} background={false} />
+      <Environment preset="studio" frames={1} background={false} environmentIntensity={0.85} />
       <LockedOrbitControls userHasGrabbedRef={userHasGrabbedRef} />
     </>
   );
@@ -178,7 +209,7 @@ function Scene() {
   return (
     <>
       <color attach="background" args={['#ffffff']} />
-      <ambientLight intensity={0.3} />
+      <ambientLight intensity={0.65} />
       <directionalLight position={[5, 5, 5]} intensity={1} />
       <directionalLight position={[-3, 2, -2]} intensity={0.35} />
       <AdaptiveDpr pixelated />
@@ -194,7 +225,6 @@ function Scene() {
 
 type ChanocasterCanvasProps = {
   className: string;
-  /** When set, pointer drags on this element drive OrbitControls (e.g. the full hero). */
   eventSourceRef?: RefObject<HTMLElement | null>;
 };
 
@@ -233,8 +263,8 @@ function ChanocasterCanvas({ className, eventSourceRef }: ChanocasterCanvasProps
         gl={{
           antialias: true,
           alpha: false,
-          powerPreference: 'high-performance',
           stencil: false,
+          powerPreference: 'high-performance',
         }}
         frameloop={inView ? 'always' : 'demand'}
         resize={{ scroll: false, debounce: RESIZE_DEBOUNCE_MS }}
@@ -246,12 +276,10 @@ function ChanocasterCanvas({ className, eventSourceRef }: ChanocasterCanvasProps
   );
 }
 
-/** Full-viewport fixed background */
 export function ChanocasterBackground() {
   return <ChanocasterCanvas className="chanocaster-bg" />;
 }
 
-/** Spinning legacy Chanocaster mesh in the hero */
 export function ChanocasterHeroLogo({
   eventSourceRef,
 }: {

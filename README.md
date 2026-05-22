@@ -15,7 +15,14 @@ Copy .env.example to .env and add EmailJS keys.
 
 ## Chanocaster 3D model (hero)
 
-The hero uses the **legacy portfolio mesh**: `public/models/chanocasterold.glb` (same file as [JacobChan182/portfolio](https://github.com/JacobChan182/portfolio) `public/chanocaster.glb`). It auto-spins like the old `ChanocasterViewer.js` and supports drag-to-orbit.
+The hero uses a **balanced** optimized mesh: `public/models/chanocaster-mid.glb` (~1.5 MB, ~388k render verts vs ~597k in the source). Rebuild after updating the source:
+
+```bash
+npm run optimize-chanocaster          # mid (default)
+npm run optimize-chanocaster -- low   # smaller / faster
+```
+
+Source: [JacobChan182/portfolio](https://github.com/JacobChan182/portfolio) `public/chanocaster.glb`.
 
 Optional animated export (separate file):
 
