@@ -100,7 +100,9 @@ export function useHeroSlideOut(panelRef: RefObject<HTMLElement | null>) {
       animatingRef.current = false;
       dismissedRef.current = dismissed;
       if (dismissed) {
-        hasScrolledAwayRef.current = false;
+        // Hero is now gone — user is in content, so mark as scrolled away
+        // immediately so a scroll-up from position 0 can restore the hero.
+        hasScrolledAwayRef.current = true;
         setSpacerCollapsed(true);
       } else {
         setSpacerCollapsed(false);
@@ -129,7 +131,6 @@ export function useHeroSlideOut(panelRef: RefObject<HTMLElement | null>) {
     const runDismiss = () => {
       if (dismissedRef.current || animatingRef.current || restoreCooldownRef.current) return;
       animatingRef.current = true;
-      hasScrolledAwayRef.current = false;
       lockScroll();
       panel.classList.add('hero-reveal__panel--dismissed', 'hero-reveal__panel--gone');
       waitForTransition(() => finishAnimation(true));
