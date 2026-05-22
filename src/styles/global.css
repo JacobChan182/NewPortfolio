@@ -30,6 +30,11 @@ html.lenis body {
   height: auto;
 }
 
+html.hero-scroll-locked,
+html.hero-scroll-locked body {
+  overflow: hidden;
+}
+
 .lenis.lenis-smooth {
   scroll-behavior: auto !important;
 }
@@ -62,6 +67,14 @@ main,
 /* Hero slides up on scroll to reveal site-content below */
 .hero-reveal {
   position: relative;
+  /* Reserve 100vh so the document flow starts the site-content below the fold */
+  height: 100vh;
+  flex-shrink: 0;
+  transition: height 0s;
+}
+
+.hero-reveal--spacer-collapsed {
+  height: 0;
 }
 
 .hero-reveal__panel {
@@ -73,7 +86,6 @@ main,
   z-index: 20;
   background: var(--bg);
   will-change: transform;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.06);
   transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
