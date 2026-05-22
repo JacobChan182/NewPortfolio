@@ -1,10 +1,13 @@
-import { useRef } from 'react';
+import { useCallback, useState } from 'react';
 import { site } from '../../content/site';
 import { ChanocasterHeroLogo } from '../three/ChanocasterBackground';
 import { ScrollReveal } from '../ui/ScrollReveal';
 
 export function Hero() {
-  const heroRef = useRef<HTMLElement>(null);
+  const [dragRoot, setDragRoot] = useState<HTMLElement | null>(null);
+  const heroRef = useCallback((node: HTMLElement | null) => {
+    setDragRoot(node);
+  }, []);
 
   return (
     <section id="home" ref={heroRef} className="section hero hero--draggable">
@@ -15,7 +18,7 @@ export function Hero() {
             <p className="hero__tagline">{site.hero.tagline}</p>
           </ScrollReveal>
         </div>
-        <ChanocasterHeroLogo eventSourceRef={heroRef} />
+        <ChanocasterHeroLogo dragRoot={dragRoot} />
       </div>
     </section>
   );

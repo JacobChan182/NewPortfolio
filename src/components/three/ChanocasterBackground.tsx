@@ -1,5 +1,5 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { AdaptiveDpr, Environment, OrbitControls, useGLTF } from '@react-three/drei';
+import { AdaptiveDpr, Environment, useGLTF } from '@react-three/drei';
 import {
   Suspense,
   useEffect,
@@ -11,7 +11,6 @@ import {
 } from 'react';
 import type { Group, Material, Mesh, Object3D, Texture } from 'three';
 import { Box3, Group as ThreeGroup, PerspectiveCamera, Vector3 } from 'three';
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 /** Balanced mesh: `npm run optimize-chanocaster` → chanocaster-mid.glb (~65% of source verts) */
@@ -21,6 +20,7 @@ const MODEL_ROTATION: [number, number, number] = [0, 0, 0];
 const MODEL_Y_OFFSET = 0;
 const AUTO_SPIN_SPEED = 0.4;
 const MAX_SPIN_DELTA = 1 / 30;
+const DRAG_ROTATE_SENSITIVITY = 0.008;
 const MAX_DPR = 1.25;
 const RESIZE_DEBOUNCE_MS = 200;
 
@@ -72,12 +72,68 @@ function computeModelBounds(scene: Object3D): ModelBounds {
   return { center, maxDim: Math.max(dims.x, dims.y, dims.z) };
 }
 
+/** Pointer drag on hero (or canvas) rotates the model on Y — same axis as auto-spin */
+function usePointerDragRotate(
+  dragRoot: HTMLElement | null,
+  spinY: RefObject<number>,
+  userHasGrabbedRef: RefObject<boolean>,
+) {
+  useEffect(() => {
+    if (!dragRoot) return;
+
+    let dragging = false;
+    let lastX = 0;
+    let pointerId = -1;
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      dragging = true;
+      pointerId = e.pointerId;
+      lastX = e.clientX;
+      userHasGrabbedRef.current = true;
+      dragRoot.classList.add('hero--dragging');
+      dragRoot.setPointerCapture(e.pointerId);
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!dragging || e.pointerId !== pointerId) return;
+      const dx = e.clientX - lastX;
+      lastX = e.clientX;
+      spinY.current += dx * DRAG_ROTATE_SENSITIVITY;
+    };
+
+    const endDrag = (e: PointerEvent) => {
+      if (!dragging || e.pointerId !== pointerId) return;
+      dragging = false;
+      userHasGrabbedRef.current = false;
+      dragRoot.classList.remove('hero--dragging');
+      if (dragRoot.hasPointerCapture(e.pointerId)) {
+        dragRoot.releasePointerCapture(e.pointerId);
+      }
+    };
+
+    dragRoot.addEventListener('pointerdown', onPointerDown);
+    dragRoot.addEventListener('pointermove', onPointerMove);
+    dragRoot.addEventListener('pointerup', endDrag);
+    dragRoot.addEventListener('pointercancel', endDrag);
+
+    return () => {
+      dragRoot.removeEventListener('pointerdown', onPointerDown);
+      dragRoot.removeEventListener('pointermove', onPointerMove);
+      dragRoot.removeEventListener('pointerup', endDrag);
+      dragRoot.removeEventListener('pointercancel', endDrag);
+    };
+  }, [dragRoot, spinY, userHasGrabbedRef]);
+}
+
 function ChanocasterContent({
   userHasGrabbedRef,
   spinEnabledRef,
+  spinY,
 }: {
   userHasGrabbedRef: RefObject<boolean>;
   spinEnabledRef: RefObject<boolean>;
+  spinY: RefObject<number>;
 }) {
   const { scene } = useGLTF(CHANOCASTER_MODEL_URL);
 
@@ -90,14 +146,9 @@ function ChanocasterContent({
 
   return (
     <>
-      <Model
-        scene={preparedScene}
-        userHasGrabbedRef={userHasGrabbedRef}
-        spinEnabledRef={spinEnabledRef}
-      />
+      <Model userHasGrabbedRef={userHasGrabbedRef} spinEnabledRef={spinEnabledRef} spinY={spinY} scene={preparedScene} />
       <FitCamera bounds={bounds} spinEnabledRef={spinEnabledRef} />
       <Environment preset="studio" frames={1} background={false} environmentIntensity={0.85} />
-      <LockedOrbitControls userHasGrabbedRef={userHasGrabbedRef} />
     </>
   );
 }
@@ -106,13 +157,14 @@ function Model({
   scene,
   userHasGrabbedRef,
   spinEnabledRef,
+  spinY,
 }: {
   scene: Object3D;
   userHasGrabbedRef: RefObject<boolean>;
   spinEnabledRef: RefObject<boolean>;
+  spinY: RefObject<number>;
 }) {
   const groupRef = useRef<Group>(null);
-  const spinY = useRef(0);
   const reducedMotion = useReducedMotion();
 
   useFrame((_, delta) => {
@@ -170,41 +222,12 @@ function FitCamera({
   return null;
 }
 
-function LockedOrbitControls({
-  userHasGrabbedRef,
-}: {
-  userHasGrabbedRef: RefObject<boolean>;
-}) {
-  const controlsRef = useRef<OrbitControlsImpl>(null);
-
-  useLayoutEffect(() => {
-    const controls = controlsRef.current;
-    if (!controls) return;
-
-    const polar = controls.getPolarAngle();
-    controls.minPolarAngle = polar;
-    controls.maxPolarAngle = polar;
-  });
-
-  return (
-    <OrbitControls
-      ref={controlsRef}
-      enablePan={false}
-      enableZoom={false}
-      enableDamping={false}
-      onStart={() => {
-        userHasGrabbedRef.current = true;
-      }}
-      onEnd={() => {
-        userHasGrabbedRef.current = false;
-      }}
-    />
-  );
-}
-
-function Scene() {
+function Scene({ dragRoot }: { dragRoot: HTMLElement | null }) {
   const userHasGrabbedRef = useRef(false);
   const spinEnabledRef = useRef(false);
+  const spinY = useRef(0);
+
+  usePointerDragRotate(dragRoot, spinY, userHasGrabbedRef);
 
   return (
     <>
@@ -217,6 +240,7 @@ function Scene() {
         <ChanocasterContent
           userHasGrabbedRef={userHasGrabbedRef}
           spinEnabledRef={spinEnabledRef}
+          spinY={spinY}
         />
       </Suspense>
     </>
@@ -225,20 +249,29 @@ function Scene() {
 
 type ChanocasterCanvasProps = {
   className: string;
-  eventSourceRef?: RefObject<HTMLElement | null>;
+  /** Hero section element — drag anywhere on it to rotate the guitar */
+  dragRoot?: HTMLElement | null;
 };
 
-function ChanocasterCanvas({ className, eventSourceRef }: ChanocasterCanvasProps) {
+function ChanocasterCanvas({ className, dragRoot = null }: ChanocasterCanvasProps) {
   const reducedMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
+  const [localDragRoot, setLocalDragRoot] = useState<HTMLElement | null>(null);
   const [inView, setInView] = useState(true);
+  const effectiveDragRoot = dragRoot ?? localDragRoot;
+
   const dpr = Math.min(
     typeof window !== 'undefined' ? window.devicePixelRatio : 1,
     MAX_DPR,
   );
 
   useEffect(() => {
-    const el = eventSourceRef?.current ?? containerRef.current;
+    if (dragRoot) return;
+    setLocalDragRoot(containerRef.current);
+  }, [dragRoot]);
+
+  useEffect(() => {
+    const el = effectiveDragRoot ?? containerRef.current;
     if (!el) return;
 
     const observer = new IntersectionObserver(
@@ -247,7 +280,7 @@ function ChanocasterCanvas({ className, eventSourceRef }: ChanocasterCanvasProps
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [eventSourceRef]);
+  }, [effectiveDragRoot]);
 
   if (reducedMotion) {
     return <div className={`${className} ${className}--fallback`} aria-hidden />;
@@ -256,8 +289,6 @@ function ChanocasterCanvas({ className, eventSourceRef }: ChanocasterCanvasProps
   return (
     <div ref={containerRef} className={className} aria-hidden>
       <Canvas
-        eventSource={(eventSourceRef ?? containerRef) as RefObject<HTMLElement>}
-        eventPrefix="client"
         camera={{ position: [0, 0, 4], fov: 42 }}
         dpr={dpr}
         gl={{
@@ -268,9 +299,8 @@ function ChanocasterCanvas({ className, eventSourceRef }: ChanocasterCanvasProps
         }}
         frameloop={inView ? 'always' : 'demand'}
         resize={{ scroll: false, debounce: RESIZE_DEBOUNCE_MS }}
-        style={{ pointerEvents: eventSourceRef ? 'none' : 'auto' }}
       >
-        <Scene />
+        <Scene dragRoot={effectiveDragRoot} />
       </Canvas>
     </div>
   );
@@ -280,10 +310,6 @@ export function ChanocasterBackground() {
   return <ChanocasterCanvas className="chanocaster-bg" />;
 }
 
-export function ChanocasterHeroLogo({
-  eventSourceRef,
-}: {
-  eventSourceRef?: RefObject<HTMLElement | null>;
-}) {
-  return <ChanocasterCanvas className="hero__logo" eventSourceRef={eventSourceRef} />;
+export function ChanocasterHeroLogo({ dragRoot }: { dragRoot: HTMLElement | null }) {
+  return <ChanocasterCanvas className="hero__logo" dragRoot={dragRoot} />;
 }
