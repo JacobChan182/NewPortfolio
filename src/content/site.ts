@@ -12,6 +12,16 @@ export const site = {
     tagline: 'Computer Science · University of Toronto',
   },
 
+  /** Place files in public/videos/ — scroll scrubs playback (no autoplay loop) */
+  heroVideo: {
+    src: '/videos/chanocaster.mp4',
+    /** Optional smaller WebM; omit key if you only have MP4 */
+    webm: undefined as string | undefined,
+    poster: undefined as string | undefined,
+    /** Viewport heights of scroll to scrub through the full clip (0 → end) */
+    scrubViewportHeights: 3,
+  },
+
   about: {
     title: 'About Me',
     paragraphs: [
