@@ -1,4 +1,5 @@
 import { Header } from './components/layout/Header';
+import { HeroReveal } from './components/layout/HeroReveal';
 import { Footer } from './components/layout/Footer';
 import { LenisProvider } from './components/providers/LenisProvider';
 import { About } from './components/sections/About';
@@ -12,12 +13,16 @@ export default function App() {
     <LenisProvider>
       <div className="app-shell">
         <Header />
-        <main>
-          <Hero />
-          <About />
-          <Projects />
-          <FunStuff />
-          <Contact />
+        <main className="main">
+          <HeroReveal>
+            <Hero />
+          </HeroReveal>
+          <div className="site-content">
+            <About />
+            <Projects />
+            <FunStuff />
+            <Contact />
+          </div>
         </main>
         <Footer />
       </div>

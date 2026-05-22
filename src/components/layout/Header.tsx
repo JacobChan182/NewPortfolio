@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { site, type NavSectionId } from '../../content/site';
 import { scrollToSection, useLenisInstance } from '../providers/LenisProvider';
 
+function getScrollY(lenis: ReturnType<typeof useLenisInstance>) {
+  return lenis?.scroll ?? window.scrollY;
+}
+
 export function Header() {
   const lenis = useLenisInstance();
   const [scrolled, setScrolled] = useState(false);
@@ -10,7 +14,7 @@ export function Header() {
 
   useEffect(() => {
     const onScroll = () => {
-      const scrollY = window.scrollY;
+      const scrollY = getScrollY(lenis);
       setScrolled(scrollY > 20);
 
       const trigger = scrollY + 120;
@@ -28,10 +32,16 @@ export function Header() {
       setActive(current);
     };
 
+    if (lenis) {
+      lenis.on('scroll', onScroll);
+    }
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    return () => {
+      lenis?.off('scroll', onScroll);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [lenis]);
 
   const goTo = (id: NavSectionId) => {
     setOpen(false);
