@@ -7,7 +7,10 @@ const HERO_TRANSITION_MS = 550;
 /** User must scroll past this before the hero can return */
 const SCROLLED_AWAY_THRESHOLD = 48;
 
-export function useHeroSlideOut(panelRef: RefObject<HTMLElement | null>) {
+export function useHeroSlideOut(
+  panelRef: RefObject<HTMLElement | null>,
+  setChanocasterActive: (active: boolean) => void,
+) {
   const lenis = useLenisInstance();
   const reducedMotion = useReducedMotion();
   const dismissedRef = useRef(false);
@@ -56,6 +59,7 @@ export function useHeroSlideOut(panelRef: RefObject<HTMLElement | null>) {
           panel.classList.add('hero-reveal__panel--dismissed', 'hero-reveal__panel--gone');
           dismissedRef.current = true;
           hasScrolledAwayRef.current = false;
+          setChanocasterActive(false);
         } else if (
           dismissedRef.current &&
           hasScrolledAwayRef.current &&
@@ -65,6 +69,7 @@ export function useHeroSlideOut(panelRef: RefObject<HTMLElement | null>) {
           panel.classList.remove('hero-reveal__panel--dismissed', 'hero-reveal__panel--gone');
           dismissedRef.current = false;
           hasScrolledAwayRef.current = false;
+          setChanocasterActive(true);
         }
 
         lastScrollYRef.current = scrollY;
@@ -78,6 +83,7 @@ export function useHeroSlideOut(panelRef: RefObject<HTMLElement | null>) {
         lenis?.off('scroll', update);
         window.removeEventListener('scroll', update);
         panel.classList.remove('hero-reveal__panel--dismissed', 'hero-reveal__panel--gone');
+        setChanocasterActive(true);
       };
     }
 
@@ -99,6 +105,7 @@ export function useHeroSlideOut(panelRef: RefObject<HTMLElement | null>) {
     const finishAnimation = (dismissed: boolean) => {
       animatingRef.current = false;
       dismissedRef.current = dismissed;
+      setChanocasterActive(!dismissed);
       if (dismissed) {
         // Hero is now gone — user is in content, so mark as scrolled away
         // immediately so a scroll-up from position 0 can restore the hero.
@@ -229,6 +236,7 @@ export function useHeroSlideOut(panelRef: RefObject<HTMLElement | null>) {
       dismissedRef.current = false;
       animatingRef.current = false;
       hasScrolledAwayRef.current = false;
+      setChanocasterActive(true);
     };
-  }, [lenis, reducedMotion, panelRef]);
+  }, [lenis, reducedMotion, panelRef, setChanocasterActive]);
 }

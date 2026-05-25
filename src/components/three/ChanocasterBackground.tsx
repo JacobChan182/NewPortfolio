@@ -24,8 +24,6 @@ const DRAG_ROTATE_SENSITIVITY = 0.008;
 const MAX_DPR = 1.25;
 const RESIZE_DEBOUNCE_MS = 200;
 
-useGLTF.preload(CHANOCASTER_MODEL_URL);
-
 type ModelBounds = {
   center: Vector3;
   maxDim: number;
@@ -257,8 +255,14 @@ function ChanocasterCanvas({ className, dragRoot = null }: ChanocasterCanvasProp
   const reducedMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
   const [localDragRoot, setLocalDragRoot] = useState<HTMLElement | null>(null);
-  const [inView, setInView] = useState(true);
   const effectiveDragRoot = dragRoot ?? localDragRoot;
+
+  useEffect(() => {
+    useGLTF.preload(CHANOCASTER_MODEL_URL);
+    return () => {
+      useGLTF.clear(CHANOCASTER_MODEL_URL);
+    };
+  }, []);
 
   const dpr = Math.min(
     typeof window !== 'undefined' ? window.devicePixelRatio : 1,
@@ -269,18 +273,6 @@ function ChanocasterCanvas({ className, dragRoot = null }: ChanocasterCanvasProp
     if (dragRoot) return;
     setLocalDragRoot(containerRef.current);
   }, [dragRoot]);
-
-  useEffect(() => {
-    const el = effectiveDragRoot ?? containerRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => setInView(entry.isIntersecting),
-      { rootMargin: '80px', threshold: 0 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [effectiveDragRoot]);
 
   if (reducedMotion) {
     return <div className={`${className} ${className}--fallback`} aria-hidden />;
@@ -297,7 +289,7 @@ function ChanocasterCanvas({ className, dragRoot = null }: ChanocasterCanvasProp
           stencil: false,
           powerPreference: 'high-performance',
         }}
-        frameloop={inView ? 'always' : 'demand'}
+        frameloop="always"
         resize={{ scroll: false, debounce: RESIZE_DEBOUNCE_MS }}
       >
         <Scene dragRoot={effectiveDragRoot} />

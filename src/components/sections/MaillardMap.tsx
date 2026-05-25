@@ -12,7 +12,7 @@ export function MaillardMap() {
   const sectionRef = useRef<HTMLElement>(null);
   const lenis = useLenisInstance();
   const reducedMotion = useReducedMotion();
-  const { videoRef, progress } = useSectionScrollVideoScrub({
+  const { bindVideo, progress, videoReady, videoError } = useSectionScrollVideoScrub({
     sectionRef,
     lenis,
     enabled: !reducedMotion,
@@ -49,29 +49,23 @@ export function MaillardMap() {
           </div>
 
           <div className="maillard-map__media">
-            {reducedMotion ? (
-              <video
-                className="maillard-map__video"
-                src={VIDEO_SRC}
-                muted
-                playsInline
-                preload="metadata"
-                aria-hidden
-              />
-            ) : (
-              <video
-                ref={videoRef}
-                className="maillard-map__video"
-                src={VIDEO_SRC}
-                muted
-                playsInline
-                preload="auto"
-                onLoadedData={(e) => {
-                  e.currentTarget.pause();
-                }}
-                aria-hidden
-              />
-            )}
+            <video
+              ref={bindVideo}
+              className="maillard-map__video"
+              src={VIDEO_SRC}
+              muted
+              playsInline
+              preload="auto"
+              aria-hidden
+              tabIndex={-1}
+            />
+            {videoError ? (
+              <span className="maillard-map__video-status maillard-map__video-status--error">
+                Video failed to load — use H.264 MP4 (not HEVC/H.265)
+              </span>
+            ) : !videoReady && !reducedMotion ? (
+              <span className="maillard-map__video-status">Loading…</span>
+            ) : null}
           </div>
         </div>
       </div>

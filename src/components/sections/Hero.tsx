@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react';
 import { site } from '../../content/site';
+import { useHeroReveal } from '../layout/HeroRevealContext';
 import { ChanocasterHeroLogo } from '../three/ChanocasterBackground';
 import { ScrollReveal } from '../ui/ScrollReveal';
 
 export function Hero() {
+  const { chanocasterActive } = useHeroReveal();
   const [dragRoot, setDragRoot] = useState<HTMLElement | null>(null);
   const heroRef = useCallback((node: HTMLElement | null) => {
     setDragRoot(node);
@@ -18,7 +20,7 @@ export function Hero() {
             <p className="hero__tagline">{site.hero.tagline}</p>
           </ScrollReveal>
         </div>
-        <ChanocasterHeroLogo dragRoot={dragRoot} />
+        {chanocasterActive ? <ChanocasterHeroLogo dragRoot={dragRoot} /> : null}
       </div>
     </section>
   );
