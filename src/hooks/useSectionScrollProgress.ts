@@ -1,10 +1,12 @@
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import type Lenis from 'lenis';
 
 type UseSectionScrollProgressOptions = {
   lenis: Lenis | null;
   /** When false, progress stays at 1 (fully revealed) */
   enabled?: boolean;
+  /** Minimum progress delta before notifying React */
+  updateStep?: number;
 };
 
 /**
@@ -13,9 +15,10 @@ type UseSectionScrollProgressOptions = {
  */
 export function useSectionScrollProgress(
   sectionRef: RefObject<HTMLElement | null>,
-  { lenis, enabled = true }: UseSectionScrollProgressOptions,
+  { lenis, enabled = true, updateStep = 0 }: UseSectionScrollProgressOptions,
 ) {
   const [progress, setProgress] = useState(0);
+  const progressRef = useRef(0);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -31,12 +34,22 @@ export function useSectionScrollProgress(
       const scrollRange = section.offsetHeight - window.innerHeight;
 
       if (scrollRange <= 0) {
-        setProgress(rect.top <= 0 ? 1 : 0);
+        const next = rect.top <= 0 ? 1 : 0;
+        progressRef.current = next;
+        setProgress(next);
         return;
       }
 
       const scrolled = -rect.top;
-      setProgress(Math.min(Math.max(scrolled / scrollRange, 0), 1));
+      const next = Math.min(Math.max(scrolled / scrollRange, 0), 1);
+      if (
+        Math.abs(next - progressRef.current) >= updateStep ||
+        next === 0 ||
+        next === 1
+      ) {
+        progressRef.current = next;
+        setProgress(next);
+      }
     };
 
     const onScroll = () => {
@@ -60,7 +73,7 @@ export function useSectionScrollProgress(
       window.removeEventListener('resize', onScroll);
       resizeObserver.disconnect();
     };
-  }, [sectionRef, lenis, enabled]);
+  }, [sectionRef, lenis, enabled, updateStep]);
 
   return progress;
 }

@@ -1,4 +1,5 @@
 import { Header } from './components/layout/Header';
+import { HeaderVisibilityProvider } from './components/layout/HeaderVisibilityContext';
 import { HeroReveal } from './components/layout/HeroReveal';
 import { Footer } from './components/layout/Footer';
 import { LenisProvider } from './components/providers/LenisProvider';
@@ -11,21 +12,23 @@ import { MaillardMap } from './components/sections/MaillardMap';
 export default function App() {
   return (
     <LenisProvider>
-      <div className="app-shell">
-        <Header />
-        <main className="main">
-          <HeroReveal>
-            <Hero />
-          </HeroReveal>
-          <div className="site-content">
-            <About />
-            <MaillardMap />
-            <FunStuff />
-            <Contact />
-          </div>
-        </main>
-        <Footer />
-      </div>
+      <HeaderVisibilityProvider>
+        <div className="app-shell">
+          <Header />
+          <main className="main">
+            <HeroReveal>
+              <Hero />
+            </HeroReveal>
+            <div className="site-content">
+              <About />
+              <MaillardMap />
+              <FunStuff />
+              <Contact />
+            </div>
+          </main>
+          <Footer />
+        </div>
+      </HeaderVisibilityProvider>
     </LenisProvider>
   );
 }

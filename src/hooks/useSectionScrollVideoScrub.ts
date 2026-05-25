@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type Lenis from 'lenis';
 
+const PROGRESS_UPDATE_STEP = 0.002;
+// One frame at 60 fps — don't seek if already within this tolerance
+const FRAME_DURATION = 1 / 60;
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
@@ -16,31 +20,24 @@ function getSectionProgress(section: HTMLElement) {
   return clamp(-rect.top / scrollRange, 0, 1);
 }
 
-function seekVideo(video: HTMLVideoElement, time: number) {
-  const duration = video.duration;
-  if (!Number.isFinite(duration) || duration <= 0) return;
-
-  const target = clamp(time, 0, Math.max(duration - 0.04, 0));
-
-  try {
-    if (video.readyState >= 2) {
-      video.currentTime = target;
-    }
-  } catch {
-    /* ignore while buffering */
-  }
+function mapVideoProgress(sectionProgress: number, startAfter: number) {
+  if (sectionProgress <= startAfter) return 0;
+  return (sectionProgress - startAfter) / (1 - startAfter);
 }
 
 type UseSectionScrollVideoScrubOptions = {
   sectionRef: RefObject<HTMLElement | null>;
+  /** Kept for API compatibility; no longer used internally. */
   lenis: Lenis | null;
   enabled?: boolean;
+  /** Section scroll fraction (0–1) before video scrub begins */
+  videoScrollStart?: number;
 };
 
 export function useSectionScrollVideoScrub({
   sectionRef,
-  lenis,
   enabled = true,
+  videoScrollStart = 0,
 }: UseSectionScrollVideoScrubOptions) {
   const [progress, setProgress] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
@@ -50,24 +47,67 @@ export function useSectionScrollVideoScrub({
   const readyRef = useRef(false);
   const rafRef = useRef(0);
   const activeRef = useRef(false);
+  const progressRef = useRef(0);
 
-  const tick = useCallback(() => {
-    const section = sectionRef.current;
+  // Pending seek: always holds the latest desired time.
+  // trySeek() drains it immediately unless a seek is in-flight.
+  const pendingTimeRef = useRef<number | null>(null);
+  const isSeekingRef = useRef(false);
+
+  const trySeek = useCallback(() => {
     const video = videoRef.current;
-    if (!section || !video) return;
+    if (!video || isSeekingRef.current || pendingTimeRef.current === null) return;
 
-    const p = getSectionProgress(section);
-    setProgress(p);
+    const duration = video.duration;
+    if (!Number.isFinite(duration) || duration <= 0) return;
 
-    if (readyRef.current && video.duration) {
-      seekVideo(video, p * video.duration);
+    const target = clamp(pendingTimeRef.current, 0, Math.max(duration - 0.04, 0));
+    pendingTimeRef.current = null;
+
+    if (Math.abs(video.currentTime - target) < FRAME_DURATION / 2) return;
+
+    isSeekingRef.current = true;
+    try {
+      video.currentTime = target;
+    } catch {
+      isSeekingRef.current = false;
     }
-  }, [sectionRef]);
+  }, []);
+
+  // Continuous RAF loop — runs every frame while the section is intersecting.
+  // Reading getBoundingClientRect() each frame is cheap and more reliable than
+  // batching seeks through scroll events.
+  const rafLoop = useCallback(() => {
+    if (!activeRef.current) return;
+
+    const section = sectionRef.current;
+    if (section) {
+      const p = getSectionProgress(section);
+
+      if (Math.abs(p - progressRef.current) >= PROGRESS_UPDATE_STEP || p === 0 || p === 1) {
+        progressRef.current = p;
+        setProgress(p);
+      }
+
+      if (readyRef.current) {
+        const video = videoRef.current;
+        if (video?.duration) {
+          const videoP = mapVideoProgress(p, videoScrollStart);
+          pendingTimeRef.current = videoP * video.duration;
+          trySeek();
+        }
+      }
+    }
+
+    rafRef.current = requestAnimationFrame(rafLoop);
+  }, [sectionRef, videoScrollStart, trySeek]);
 
   const bindVideo = useCallback(
     (node: HTMLVideoElement | null) => {
       videoRef.current = node;
       readyRef.current = false;
+      isSeekingRef.current = false;
+      pendingTimeRef.current = null;
       setVideoReady(false);
       setVideoError(false);
 
@@ -78,8 +118,13 @@ export function useSectionScrollVideoScrub({
         readyRef.current = true;
         setVideoReady(true);
         node.pause();
-        seekVideo(node, 0.05);
-        tick();
+      };
+
+      // When a seek finishes, immediately flush any pending seek that
+      // accumulated while the browser was decoding.
+      const onSeeked = () => {
+        isSeekingRef.current = false;
+        trySeek();
       };
 
       const onError = () => {
@@ -90,6 +135,7 @@ export function useSectionScrollVideoScrub({
 
       node.addEventListener('loadedmetadata', markReady);
       node.addEventListener('canplay', markReady);
+      node.addEventListener('seeked', onSeeked);
       node.addEventListener('error', onError);
 
       if (node.readyState >= 1) markReady();
@@ -97,10 +143,11 @@ export function useSectionScrollVideoScrub({
       return () => {
         node.removeEventListener('loadedmetadata', markReady);
         node.removeEventListener('canplay', markReady);
+        node.removeEventListener('seeked', onSeeked);
         node.removeEventListener('error', onError);
       };
     },
-    [enabled, tick],
+    [enabled, trySeek],
   );
 
   useEffect(() => {
@@ -110,25 +157,12 @@ export function useSectionScrollVideoScrub({
       return;
     }
 
-    const onScroll = () => {
-      if (!activeRef.current) return;
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
-    const loop = () => {
-      tick();
-      if (activeRef.current) {
-        rafRef.current = requestAnimationFrame(loop);
-      }
-    };
-
     const observer = new IntersectionObserver(
       ([entry]) => {
         activeRef.current = entry.isIntersecting;
         if (activeRef.current) {
           cancelAnimationFrame(rafRef.current);
-          rafRef.current = requestAnimationFrame(loop);
+          rafRef.current = requestAnimationFrame(rafLoop);
         } else {
           cancelAnimationFrame(rafRef.current);
         }
@@ -138,23 +172,12 @@ export function useSectionScrollVideoScrub({
 
     observer.observe(section);
 
-    if (lenis) lenis.on('scroll', onScroll);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-
-    const resizeObserver = new ResizeObserver(onScroll);
-    resizeObserver.observe(section);
-
     return () => {
       cancelAnimationFrame(rafRef.current);
       activeRef.current = false;
       observer.disconnect();
-      resizeObserver.disconnect();
-      lenis?.off('scroll', onScroll);
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
     };
-  }, [sectionRef, lenis, enabled, tick]);
+  }, [sectionRef, enabled, rafLoop]);
 
   return { bindVideo, progress, videoReady, videoError };
 }

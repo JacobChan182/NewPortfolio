@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { site, type NavSectionId } from '../../content/site';
 import { scrollToSection, useLenisInstance } from '../providers/LenisProvider';
+import { useHeaderVisibility } from './HeaderVisibilityContext';
 
 function getScrollY(lenis: ReturnType<typeof useLenisInstance>) {
   return lenis?.scroll ?? window.scrollY;
@@ -8,9 +9,19 @@ function getScrollY(lenis: ReturnType<typeof useLenisInstance>) {
 
 export function Header() {
   const lenis = useLenisInstance();
+  const { maillardNavHidden } = useHeaderVisibility();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<NavSectionId>('home');
+  const [hoverReveal, setHoverReveal] = useState(false);
+
+  const hidden = maillardNavHidden && !hoverReveal;
+
+  useEffect(() => {
+    if (!maillardNavHidden) {
+      setHoverReveal(false);
+    }
+  }, [maillardNavHidden]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -48,35 +59,60 @@ export function Header() {
     scrollToSection(id, lenis);
   };
 
-  return (
-    <header className={`header ${scrolled ? 'header--scrolled' : ''}`}>
-      <button
-        type="button"
-        className="header__menu"
-        aria-label="Toggle menu"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span />
-        <span />
-        <span />
-      </button>
+  const revealFromHover = () => {
+    if (maillardNavHidden) {
+      setHoverReveal(true);
+    }
+  };
 
-      <nav className={`header__nav ${open ? 'header__nav--open' : ''}`}>
-        <ul>
-          {site.nav.map(({ id, label }) => (
-            <li key={id}>
-              <button
-                type="button"
-                className={`header__link ${active === id ? 'header__link--active' : ''}`}
-                onClick={() => goTo(id)}
-              >
-                {label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
-    </header>
+  const hideFromHover = () => {
+    if (maillardNavHidden) {
+      setHoverReveal(false);
+    }
+  };
+
+  return (
+    <>
+      {maillardNavHidden ? (
+        <div
+          className="header-hover-zone"
+          aria-hidden="true"
+          onMouseEnter={revealFromHover}
+        />
+      ) : null}
+
+      <header
+        className={`header ${scrolled ? 'header--scrolled' : ''} ${hidden ? 'header--hidden' : ''}`}
+        onMouseLeave={hideFromHover}
+      >
+        <button
+          type="button"
+          className="header__menu"
+          aria-label="Toggle menu"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
+        <nav className={`header__nav ${open ? 'header__nav--open' : ''}`}>
+          <ul>
+            {site.nav.map(({ id, label }) => (
+              <li key={id}>
+                <button
+                  type="button"
+                  className={`header__link ${active === id ? 'header__link--active' : ''}`}
+                  onClick={() => goTo(id)}
+                >
+                  {label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </header>
+    </>
   );
 }
