@@ -6,7 +6,7 @@ import { About } from './components/sections/About';
 import { Contact } from './components/sections/Contact';
 import { FunStuff } from './components/sections/FunStuff';
 import { Hero } from './components/sections/Hero';
-import { Projects } from './components/sections/Projects';
+import { MaillardMap } from './components/sections/MaillardMap';
 
 export default function App() {
   return (
@@ -19,7 +19,7 @@ export default function App() {
           </HeroReveal>
           <div className="site-content">
             <About />
-            <Projects />
+            <MaillardMap />
             <FunStuff />
             <Contact />
           </div>
