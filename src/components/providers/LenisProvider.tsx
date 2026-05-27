@@ -55,9 +55,35 @@ export function LenisProvider({ children }: LenisProviderProps) {
   return <LenisContext.Provider value={lenis}>{children}</LenisContext.Provider>;
 }
 
-export function scrollToSection(id: string, lenis: Lenis | null) {
+type ScrollToSectionOptions = {
+  /** 0–1 progress through a tall scroll-driven section (e.g. video scrub) */
+  sectionProgress?: number;
+};
+
+function sectionScrollTop(el: HTMLElement, sectionProgress: number) {
+  const scrollRange = Math.max(el.offsetHeight - window.innerHeight, 0);
+  const progress = Math.min(Math.max(sectionProgress, 0), 1);
+  return el.offsetTop + progress * scrollRange;
+}
+
+export function scrollToSection(
+  id: string,
+  lenis: Lenis | null,
+  options?: ScrollToSectionOptions,
+) {
   const el = document.getElementById(id);
   if (!el) return;
+
+  if (options?.sectionProgress != null) {
+    const top = sectionScrollTop(el, options.sectionProgress);
+    if (lenis) {
+      lenis.scrollTo(top, { offset: -72, duration: 1.1 });
+    } else {
+      window.scrollTo({ top: top - 72, behavior: 'smooth' });
+    }
+    return;
+  }
+
   if (lenis) {
     lenis.scrollTo(el, { offset: -72, duration: 1.1 });
   } else {

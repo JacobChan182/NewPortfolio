@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { MAILLARD_VIDEO_SCRUB_START } from '../../content/maillardMap';
 import { site, type NavSectionId } from '../../content/site';
 import { scrollToSection, useLenisInstance } from '../providers/LenisProvider';
+import { useHeroReveal } from './HeroRevealContext';
 import { useHeaderVisibility } from './HeaderVisibilityContext';
 
 function getScrollY(lenis: ReturnType<typeof useLenisInstance>) {
@@ -9,6 +11,7 @@ function getScrollY(lenis: ReturnType<typeof useLenisInstance>) {
 
 export function Header() {
   const lenis = useLenisInstance();
+  const { dismissHero, goToHome } = useHeroReveal();
   const { maillardNavHidden } = useHeaderVisibility();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -54,8 +57,21 @@ export function Header() {
     };
   }, [lenis]);
 
-  const goTo = (id: NavSectionId) => {
+  const goTo = async (id: NavSectionId) => {
     setOpen(false);
+
+    if (id === 'home') {
+      await goToHome();
+      return;
+    }
+
+    await dismissHero();
+
+    if (id === 'projects') {
+      scrollToSection(id, lenis, { sectionProgress: MAILLARD_VIDEO_SCRUB_START + 0.04 });
+      return;
+    }
+
     scrollToSection(id, lenis);
   };
 

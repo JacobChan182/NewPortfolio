@@ -1,4 +1,9 @@
 import { useEffect, useRef } from 'react';
+import {
+  MAILLARD_TEXT_SCROLL_VH,
+  MAILLARD_VIDEO_SCRUB_START,
+  MAILLARD_VIDEO_SCRUB_VH,
+} from '../../content/maillardMap';
 import { useSectionScrollVideoScrub } from '../../hooks/useSectionScrollVideoScrub';
 import { useLenisInstance } from '../providers/LenisProvider';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
@@ -10,14 +15,8 @@ const TECH_STACK =
 const VIDEO_SRC = '/videos/full_phone_scrub.mp4';
 const TESTFLIGHT_URL = 'https://testflight.apple.com/join/acu9qcwU';
 const TESTFLIGHT_BADGE = '/images/ui/testflight-badge.png';
-/** Scroll distance for the title reveal (unchanged from original 220vh section) */
-const TEXT_SCROLL_VH = 54;
-/** Scroll distance to scrub through the full 12s clip */
-const VIDEO_SCRUB_VH = 200;
-/** Section scroll fraction where video scrub begins — derived from vh split above */
-const TEXT_SCROLL_END = TEXT_SCROLL_VH / (TEXT_SCROLL_VH + VIDEO_SCRUB_VH);
 /** Total section height: sticky viewport + text runway + video runway */
-const SCROLL_VH = 100 + TEXT_SCROLL_VH + VIDEO_SCRUB_VH;
+const SCROLL_VH = 100 + MAILLARD_TEXT_SCROLL_VH + MAILLARD_VIDEO_SCRUB_VH;
 
 export function MaillardMap() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -28,10 +27,12 @@ export function MaillardMap() {
     sectionRef,
     lenis,
     enabled: !reducedMotion,
-    videoScrollStart: TEXT_SCROLL_END,
+    videoScrollStart: MAILLARD_VIDEO_SCRUB_START,
   });
 
-  const textProgress = reducedMotion ? 1 : Math.min(progress / TEXT_SCROLL_END, 1);
+  const textProgress = reducedMotion
+    ? 1
+    : Math.min(progress / MAILLARD_VIDEO_SCRUB_START, 1);
 
   useEffect(() => {
     if (reducedMotion) {
@@ -51,7 +52,7 @@ export function MaillardMap() {
 
   return (
     <section
-      id="maillard-map"
+      id="projects"
       ref={sectionRef}
       className="section maillard-map"
       style={{

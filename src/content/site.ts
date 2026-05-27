@@ -4,7 +4,6 @@ export const site = {
     { id: 'home', label: 'Home' },
     { id: 'about', label: 'About Me' },
     { id: 'projects', label: 'Projects' },
-    { id: 'fun-stuff', label: 'Fun Stuff' },
     { id: 'contact', label: 'Contact' },
   ] as const,
 
