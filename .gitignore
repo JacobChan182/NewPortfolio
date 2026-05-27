@@ -9,6 +9,7 @@ _legacy-portfolio
 # Large media (over GitHub 100MB limit) — keep locally, don't commit
 public/media/0001-0300.mkv
 public/videos/maillardmap.mkv
+public/videos/full_phone_scrub_source.mp4
 
 # Cursor AI — guidelines and agent config (local only)
 .cursor/

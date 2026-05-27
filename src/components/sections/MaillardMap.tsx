@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import {
+  MAILLARD_SCRUB_VIDEO_URL,
   MAILLARD_TEXT_SCROLL_VH,
   MAILLARD_VIDEO_SCRUB_START,
   MAILLARD_VIDEO_SCRUB_VH,
@@ -12,7 +13,7 @@ import { useHeaderVisibility } from '../layout/HeaderVisibilityContext';
 const TITLE = 'MaillardMap';
 const TECH_STACK =
   'Swift, Kotlin, Express, TypeScript, PostgreSQL, Mapbox, Foursquare, S3, OpenAPI';
-const VIDEO_SRC = '/videos/full_phone_scrub.mp4';
+const VIDEO_SRC = MAILLARD_SCRUB_VIDEO_URL;
 const TESTFLIGHT_URL = 'https://testflight.apple.com/join/acu9qcwU';
 const TESTFLIGHT_BADGE = '/images/ui/testflight-badge.png';
 /** Total section height: sticky viewport + text runway + video runway */

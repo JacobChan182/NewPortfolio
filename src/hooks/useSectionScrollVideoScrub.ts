@@ -128,6 +128,9 @@ export function useSectionScrollVideoScrub({
       };
 
       const onError = () => {
+        // StrictMode / src changes can abort in-flight loads — not a real failure
+        const code = node.error?.code;
+        if (code === MediaError.MEDIA_ERR_ABORTED) return;
         readyRef.current = false;
         setVideoReady(false);
         setVideoError(true);
